@@ -39,11 +39,11 @@ Fill this in as you go. Bullet points are fine — be specific, not long.
 ### How I diagnosed it
 
 ### Root cause
-The proxy image already containt a configuration (/etc/nginx/nginx.conf) when nginx-common was installed. dpkg asks which version to keep - the existing version or the package maintainer' version. Docker builds are non-interactive - nobody types N, so standard input reaches the end of file EOF. so nginx-common failed to configure, and then nginx failed because its dependency was left unconfigures. 
+The proxy image already containt a configuration (/etc/nginx/nginx.conf) when nginx-common was installed. dpkg asks which version to keep - the existing version or the package maintainer' version. Docker builds are non-interactive - nobody types N, so standard input reaches the end of file EOF. so nginx-common failed to configure, and then nginx failed because its dependency was left unconfigures.
 
 ### Fix
-Install nginx, copy the custom nginx.conf afterward. That avoids package-install conflict. 
----
+Install nginx, copy the custom nginx.conf afterward. That avoids package-install conflict.
+
 
 ## Defect 2: Proxy cannot reach the backend
 
@@ -97,7 +97,18 @@ test-runner-1  | TEST RUNNER CRASHED: HTTP Error 502: Bad Gateway
 Optional. Answer only the ones you got to — number them, skip the rest.
 
 >
+To minimizes packages, replace ubuntu:24.04 with nginx:alpine. because alpine already contains nginx, we can remove the entire apt-get block:
+        RUN apt-get update && \
+            apt-get install -y nginx curl htop vim git
+
 
 ---
+root - non-root
+
+but then we lack permissions. "proxy-1    | nginx: [emerg] mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)"
+so we can add a setup command to creat nginx cache, and give the nginx user permision to use it. 
+        RUN mkdir -p /var/cache/nginx && \
+            chown -R nginx:nginx /var/cache/nginx
+
 
 ## Anything you would do differently with more time
