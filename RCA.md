@@ -98,22 +98,30 @@ This changed the file mode from 100644 to 100755. The Docker tests had already p
 
 ## 1. Image Size
 
-To minimize packages, replace ubuntu:24.04 with nginx:alpine. because alpine already contains nginx, we can remove the entire apt-get block:
-        RUN apt-get update && \
-            apt-get install -y nginx curl htop vim git
+I replaced ubuntu:24.04 with nginx:alpine, which is a smaller image that already includes Nginx.
 
-avoid unnecessary production tools such as vim, git, htop. 
+This allowed me to remove the entire apt-get installation block, including unnecessary production tools like vim, git, and htop.
 
 ## 2. Security: root vs. non-root
+I changed the Dockerfile to run Nginx as USER nginx instead of root to limit its permissions.
+This required a few configuration changes: 
 
-Running Nginx as root gives it unnecessary privileges.
-added USER
-. 
-Nginx, running inside a Docker container, wasn't allowed to write to its cache directory.
-but then we lack permissions. "proxy-1    | nginx: [emerg] mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)"
-so we can add a setup command to creat nginx cache, and give the nginx user permision to use it. 
+## Listening port: 80 -> 8080
+Port 80 normally requires extra privileges. Since I wanted Nginx to run without root, I changed the port it receives requests on to 8080.
+
+## Docker Compose: 8081:8080
+I changed the Docker Compose port mapping so requests arriving at port 8081 on my computer would be forwarded to Nginx's new port, 8080.
+
+## pid /tmp/nginx.pid
+Nginx needs to write a file containing its process ID. The non-root user may not have permission to write it in the default location, so I moved it to /tmp, which is normally writable.
+
+## Cache directory permissions
+Nginx needs a directory to store temporary files, but the non-root user didn't have permission to write there. After switching to non-root, I encountered this error: 
+        "mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)"
+I changed the directory's ownership to the Nginx user:
         RUN mkdir -p /var/cache/nginx && \
             chown -R nginx:nginx /var/cache/nginx
 
 
 ## Anything you would do differently with more time
+I would spend more time learning Docker, Nginx, and CI/CD so I could better understand the system and design additional tests, rather than just fixing the failures I encountered.
